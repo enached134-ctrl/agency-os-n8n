@@ -1,0 +1,79 @@
+{
+  "name": "Slack transcript -> Agency brief -> ClickUp",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "agency-brief",
+        "responseMode": "lastNode",
+        "options": { "rawBody": true }
+      },
+      "id": "b1a1f001-0000-4000-8000-000000000001",
+      "name": "Slack / Transcript Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [220, 300],
+      "webhookId": "agency-brief"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Verify the Slack request signature before doing any paid/side-effecting work.\n// Requires the webhook 'rawBody' option (set above) and $env.SLACK_SIGNING_SECRET.\nconst crypto = require('crypto');\nconst secret = $env.SLACK_SIGNING_SECRET;\nif (!secret) throw new Error('SLACK_SIGNING_SECRET is not set');\nconst item = $input.first();\nconst headers = item.json.headers || {};\nconst sig = headers['x-slack-signature'];\nconst ts = headers['x-slack-request-timestamp'];\nif (!sig || !ts) throw new Error('Missing Slack signature headers');\nif (Math.abs(Date.now() / 1000 - Number(ts)) > 300) throw new Error('Stale Slack request (possible replay)');\nconst raw = item.json.rawBody || JSON.stringify(item.json.body || {});\nconst base = `v0:${ts}:${raw}`;\nconst expected = 'v0=' + crypto.createHmac('sha256', secret).update(base).digest('hex');\nconst a = Buffer.from(expected);\nconst b = Buffer.from(String(sig));\nif (a.length !== b.length || !crypto.timingSafeEqual(a, b)) throw new Error('Invalid Slack signature');\nreturn [{ json: item.json.body || item.json }];"
+      },
+      "id": "b1a1f001-0000-4000-8000-000000000004",
+      "name": "Verify Slack Signature",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 300]
+    },
+    {
+      "parameters": {
+        "transcriptField": "text",
+        "client": "",
+        "maxAttempts": 3
+      },
+      "id": "b1a1f001-0000-4000-8000-000000000002",
+      "name": "Agency Brief Extractor",
+      "type": "n8n-nodes-agency-os.agencyBriefExtractor",
+      "typeVersion": 1,
+      "position": [660, 300],
+      "credentials": {
+        "agencyOsApi": { "id": "1", "name": "Agency OS API" }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.clickup.com/api/v2/list/{{$env.CLICKUP_LIST_ID}}/task",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{ "name": "Authorization", "value": "={{$env.CLICKUP_API_TOKEN}}" }]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ name: '[' + $json.brief.client + '] ' + $json.brief.title, markdown_description: $json.brief.summary }) }}",
+        "options": {}
+      },
+      "id": "b1a1f001-0000-4000-8000-000000000003",
+      "name": "Create ClickUp Task",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [880, 300]
+    }
+  ],
+  "connections": {
+    "Slack / Transcript Webhook": {
+      "main": [[{ "node": "Verify Slack Signature", "type": "main", "index": 0 }]]
+    },
+    "Verify Slack Signature": {
+      "main": [[{ "node": "Agency Brief Extractor", "type": "main", "index": 0 }]]
+    },
+    "Agency Brief Extractor": {
+      "main": [[{ "node": "Create ClickUp Task", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "pinData": {},
+  "meta": { "templateId": "n8n-nodes-agency-os.slack-to-clickup" },
+  "tags": [{ "name": "agency-os" }]
+}

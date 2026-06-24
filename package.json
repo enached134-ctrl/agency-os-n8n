@@ -1,0 +1,58 @@
+{
+  "name": "n8n-nodes-agency-os",
+  "version": "0.1.0",
+  "description": "Production-grade n8n agency operating system: Slack/meeting transcript -> schema-validated Claude brief -> idempotent ClickUp ticket + SOP suggestions + traffic-light delivery health.",
+  "license": "LicenseRef-PolyForm-Noncommercial-1.0.0",
+  "author": "Daniel Enache",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/enached134-ctrl/agency-os-n8n.git"
+  },
+  "keywords": [
+    "n8n",
+    "n8n-community-node-package",
+    "automation",
+    "claude",
+    "agency",
+    "clickup",
+    "slack"
+  ],
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json && node scripts/copy-assets.cjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "demo": "tsx demo/demo.ts",
+    "eval": "tsx evals/run.ts"
+  },
+  "n8n": {
+    "n8nNodesApiVersion": 1,
+    "credentials": [
+      "dist/credentials/AgencyOsApi.credentials.js"
+    ],
+    "nodes": [
+      "dist/nodes/AgencyBriefExtractor/AgencyBriefExtractor.node.js"
+    ]
+  },
+  "files": [
+    "dist"
+  ],
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.32.1",
+    "pg": "^8.13.1",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "@types/pg": "^8.11.10",
+    "n8n-workflow": "^1.70.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}

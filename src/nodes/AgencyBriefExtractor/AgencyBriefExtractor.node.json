@@ -1,0 +1,13 @@
+{
+  "node": "n8n-nodes-agency-os.agencyBriefExtractor",
+  "nodeVersion": "1.0",
+  "codexVersion": "1.0",
+  "categories": ["AI", "Productivity"],
+  "resources": {
+    "primaryDocumentation": [
+      {
+        "url": "https://github.com/enached134-ctrl/agency-os-n8n"
+      }
+    ]
+  }
+}

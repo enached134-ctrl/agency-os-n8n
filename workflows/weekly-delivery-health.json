@@ -1,0 +1,59 @@
+{
+  "name": "Weekly delivery-health report",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": { "interval": [{ "field": "weeks", "triggerAtDay": [1], "triggerAtHour": 8 }] }
+      },
+      "id": "c2b2f002-0000-4000-8000-000000000001",
+      "name": "Weekly Schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT client, status, score FROM delivery_health ORDER BY score DESC",
+        "options": {}
+      },
+      "id": "c2b2f002-0000-4000-8000-000000000002",
+      "name": "Read Delivery Health",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [520, 300],
+      "credentials": {
+        "postgres": { "id": "2", "name": "Agency OS Postgres" }
+      }
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": { "__rl": true, "value": "#delivery", "mode": "name" },
+        "text": "=Weekly delivery health:\n{{ $json.client }} — {{ $json.status }} ({{ $json.score }})",
+        "otherOptions": {}
+      },
+      "id": "c2b2f002-0000-4000-8000-000000000003",
+      "name": "Post to Slack",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [800, 300],
+      "credentials": {
+        "slackApi": { "id": "3", "name": "Slack" }
+      }
+    }
+  ],
+  "connections": {
+    "Weekly Schedule": {
+      "main": [[{ "node": "Read Delivery Health", "type": "main", "index": 0 }]]
+    },
+    "Read Delivery Health": {
+      "main": [[{ "node": "Post to Slack", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "pinData": {},
+  "meta": { "templateId": "agency-os-n8n.weekly-health" },
+  "tags": [{ "name": "agency-os" }]
+}

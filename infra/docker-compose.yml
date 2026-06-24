@@ -1,0 +1,101 @@
+# Self-hosted Agency OS stack: n8n in queue mode (main + worker), Redis,
+# Postgres (for both n8n and the agency-os state schema), behind Caddy.
+#
+#   cd infra && cp ../.env.example .env
+#   # set a strong N8N_ENCRYPTION_KEY in .env  (generate: openssl rand -hex 24)
+#   docker compose up -d
+#   open http://localhost:8080   (or http://localhost:5678 directly)
+
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-agencyos}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-agencyos}
+      POSTGRES_DB: ${POSTGRES_DB:-agencyos}
+    volumes:
+      - ./db:/docker-entrypoint-initdb.d:ro
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      # Assert the n8n database actually exists (not just that the server is up),
+      # so dependents start only AFTER the init scripts (CREATE DATABASE n8n) run.
+      test: ["CMD-SHELL", "psql -U $$POSTGRES_USER -d n8n -c 'SELECT 1' >/dev/null 2>&1"]
+      interval: 5s
+      timeout: 5s
+      retries: 24
+      start_period: 10s
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    # Durable (AOF) + authenticated — Redis is the queue-mode job broker.
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:-agencyos}"]
+    volumes:
+      - redis_data:/data
+
+  n8n:
+    image: n8nio/n8n:latest
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    environment:
+      EXECUTIONS_MODE: queue
+      QUEUE_BULL_REDIS_HOST: redis
+      QUEUE_BULL_REDIS_PASSWORD: ${REDIS_PASSWORD:-agencyos}
+      DB_TYPE: postgresdb
+      DB_POSTGRESDB_HOST: postgres
+      DB_POSTGRESDB_DATABASE: n8n
+      DB_POSTGRESDB_USER: ${POSTGRES_USER:-agencyos}
+      DB_POSTGRESDB_PASSWORD: ${POSTGRES_PASSWORD:-agencyos}
+      # Fail fast if unset — this key encrypts all stored credentials.
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY:?set N8N_ENCRYPTION_KEY in .env (generate: openssl rand -hex 24)}
+      N8N_HOST: ${N8N_HOST:-localhost}
+      N8N_PROTOCOL: http
+      GENERIC_TIMEZONE: ${GENERIC_TIMEZONE:-Europe/Bucharest}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      CLICKUP_API_TOKEN: ${CLICKUP_API_TOKEN:-}
+      CLICKUP_LIST_ID: ${CLICKUP_LIST_ID:-}
+    ports:
+      - "5678:5678"
+
+  n8n-worker:
+    image: n8nio/n8n:latest
+    restart: unless-stopped
+    command: worker
+    depends_on:
+      n8n:
+        condition: service_started
+      redis:
+        condition: service_started
+      postgres:
+        condition: service_healthy
+    environment:
+      EXECUTIONS_MODE: queue
+      QUEUE_BULL_REDIS_HOST: redis
+      QUEUE_BULL_REDIS_PASSWORD: ${REDIS_PASSWORD:-agencyos}
+      DB_TYPE: postgresdb
+      DB_POSTGRESDB_HOST: postgres
+      DB_POSTGRESDB_DATABASE: n8n
+      DB_POSTGRESDB_USER: ${POSTGRES_USER:-agencyos}
+      DB_POSTGRESDB_PASSWORD: ${POSTGRES_PASSWORD:-agencyos}
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY:?set N8N_ENCRYPTION_KEY in .env (generate: openssl rand -hex 24)}
+      # Must match the main instance — the worker executes the nodes.
+      GENERIC_TIMEZONE: ${GENERIC_TIMEZONE:-Europe/Bucharest}
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - n8n
+    ports:
+      - "8080:80"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+
+volumes:
+  pg_data:
+  redis_data:

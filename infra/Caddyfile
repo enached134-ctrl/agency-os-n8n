@@ -1,0 +1,5 @@
+# Local dev reverse proxy. For a real VPS, replace `:80` with your domain and
+# Caddy will provision HTTPS automatically.
+:80 {
+	reverse_proxy n8n:5678
+}
