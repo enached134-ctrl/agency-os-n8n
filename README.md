@@ -7,6 +7,8 @@
 
 > This is **not** a "dump my n8n templates" repo. It's the reliability layer agencies actually lack: typed AI output with a repair loop, idempotent side-effects, an auditable scoring engine, and an offline test/eval suite. The value is in the architecture, not a prompt.
 
+![agency-os-n8n — Slack thread to AI brief to ClickUp, the reliable way](docs/img/01-cover.png)
+
 ---
 
 ## What it does
@@ -19,6 +21,8 @@ Small agencies drown in manual ops: meeting notes that never become tickets, SOP
 4. **Weekly delivery-health.** A **deterministic, unit-tested** rules engine scores each client red/amber/green; Claude only *narrates* the already-computed numbers (the LLM is kept out of the scoring path, so ratings are auditable and reproducible).
 
 ## Architecture
+
+![Pipeline: Slack/transcript → idempotency guard → Claude extract + repair → ClickUp → SOP + delivery health](docs/img/02-pipeline.png)
 
 ```mermaid
 flowchart LR
@@ -50,6 +54,8 @@ flowchart LR
 | "Works on my machine once" | **Offline demo + hermetic eval + CI**, no keys needed | [`demo/`](demo), [`evals/`](evals) |
 
 ## Quickstart (offline, no keys)
+
+![Sample run: a transcript becomes a validated brief, an idempotent ClickUp ticket, a matched SOP, and the traffic-light board](docs/img/03-sample.png)
 
 ```bash
 npm install
