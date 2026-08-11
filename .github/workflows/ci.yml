@@ -14,7 +14,11 @@ jobs:
         with:
           node-version: 20
           cache: npm
-      - run: npm ci
+      # n8n-workflow (types-only devDependency) pulls in @n8n/expression-runtime,
+      # which builds isolated-vm from source via node-gyp and fails on the runner.
+      # Nothing here needs that native binary — typecheck, tests, eval and build
+      # are all pure TypeScript — so skip install scripts.
+      - run: npm ci --ignore-scripts
       - name: Typecheck
         run: npm run typecheck
       - name: Unit tests
