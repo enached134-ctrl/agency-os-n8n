@@ -105,6 +105,19 @@ infra/             docker-compose (n8n queue mode), Caddy, Postgres schema + see
 workflows/         importable n8n workflow JSON
 ```
 
+## Status, honestly
+
+**Beta.** Every piece described above is implemented and covered by tests: 25 unit and
+integration tests pass, and the extraction eval scores **98% mean against an 80% gate** on
+every commit. The demo and the eval are hermetic, so anyone can verify that claim in about a
+minute without a key.
+
+What it has **not** had is a year of somebody else's traffic. It has not been load-tested,
+the Postgres store has not been run under real concurrency beyond its integration test, and
+the ClickUp client covers the endpoints this pipeline needs rather than the whole API.
+
+"Production-grade" above describes how it is built, not how long it has been running.
+
 ## License
 
 [PolyForm Noncommercial 1.0.0](LICENSE) — source-available for study and noncommercial use. This is a portfolio/reference system, not a free product to repackage and resell. For commercial use, contact me.
